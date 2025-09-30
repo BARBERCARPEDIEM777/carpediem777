@@ -12,8 +12,6 @@
         .card { background: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; }
         input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ced4da; box-sizing: border-box; }
         button { background-color: #AF8C53; color: white; border: none; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
-        button:hover { background-color: #9a794e; }
-        button.action-btn { font-size: 0.8em; padding: 6px 10px; width: auto; margin: 0 5px; }
         .hidden { display: none; }
         #login-container { max-width: 400px; margin: 100px auto; text-align: center; }
         #password-field { display: none; }
@@ -21,14 +19,11 @@
         #logout-btn { width: auto; padding: 8px 15px; background-color: #6c757d; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #e9ecef; text-align: left; vertical-align: middle; }
-        th { background-color: #f8f9fa; color: #495057; font-weight: 600; }
-        .actions-cell { width: 130px; text-align: right; }
         .total-display { font-weight: bold; font-size: 1.2em; text-align: right; margin-top: 10px; padding: 12px; border-radius: 6px; }
         #daily-total { background-color: #e9f7ef; color: #155724; }
         #commission-total { background-color: #fff4e5; color: #856404; }
         .service-list { max-height: 150px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px; border-radius: 6px; background-color: #fff; }
         .export-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .export-btn { background-color: #1a73e8; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
     </style>
 </head>
@@ -64,7 +59,7 @@
                     <input type="number" id="service-price" placeholder="Precio ($)">
                     <button onclick="addService()">+ Agregar Servicio</button>
                     <table id="services-table">
-                        <thead><tr><th>Servicio</th><th>Precio</th><th class="actions-cell">Acciones</th></tr></thead>
+                        <thead><tr><th>Servicio</th><th>Precio</th><th>Acciones</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -74,7 +69,7 @@
                     <input type="number" id="barber-commission" placeholder="Comisión (%)">
                     <button onclick="addBarber()">+ Agregar Barbero</button>
                     <table id="barbers-table">
-                        <thead><tr><th>Nombre</th><th>Comisión</th><th class="actions-cell">Acciones</th></tr></thead>
+                        <thead><tr><th>Nombre</th><th>Comisión</th><th>Acciones</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -99,31 +94,26 @@
             <label for="filter-date">Mostrando ventas para la fecha:</label>
             <input type="date" id="filter-date" onchange="loadSalesForToday()">
             <table id="sales-table">
-                <thead><tr><th>Barbero</th><th>Servicios</th><th>Total Venta</th><th>Comisión Barbero</th><th>Método de Pago</th><th>Hora</th><th class="actions-cell">Acciones</th></tr></thead>
+                <thead><tr><th>Barbero</th><th>Servicios</th><th>Total Venta</th><th>Comisión Barbero</th><th>Método de Pago</th><th>Hora</th></tr></thead>
                 <tbody></tbody>
             </table>
             <div id="daily-total" class="total-display">Total del Día: $ 0</div>
             <div id="commission-total" class="total-display">Total Comisiones del Día: $ 0</div>
             <div class="export-buttons admin-only">
-                <button class="export-btn" onclick="handleExportDay()">Exportar Día</button>
-                <button class="export-btn" onclick="handleExportWeek()">Exportar Semana</button>
-                <button class="export-btn" onclick="handleExportMonth()">Exportar Mes</button>
+                <button onclick="handleExportDay()">Exportar Día</button>
+                <button onclick="handleExportWeek()">Exportar Semana</button>
+                <button onclick="handleExportMonth()">Exportar Mes</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- ESTADO DE LA APLICACIÓN ---
         let ADMIN_PASSWORD = 'admin123';
         let services = [];
         let barbers = [];
         let sales = [];
-
-        // --- FUNCIONES DE UTILIDAD ---
         const currencyFormatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
         function formatCOP(value) { return currencyFormatter.format(value || 0); }
-
-        // --- LÓGICA DE LOGIN Y NAVEGACIÓN ---
         async function login() {
             const role = document.getElementById('role-select').value;
             if (role === 'admin' && document.getElementById('admin-password').value !== ADMIN_PASSWORD) {
@@ -139,11 +129,10 @@
             document.getElementById('filter-date').value = new Date().toISOString().slice(0, 10);
             await renderAll();
         }
-
         async function loadInitialData() {
             try {
                 const response = await fetch('/api/data');
-                if (!response.ok) throw new Error('Error de red al cargar datos.');
+                if (!response.ok) throw new Error('Error de red.');
                 const data = await response.json();
                 services = data.services || [];
                 barbers = data.barbers || [];
@@ -152,15 +141,12 @@
                 alert('No se pudieron cargar los datos del servidor.');
             }
         }
-
         function logout() { document.getElementById('app-container').classList.add('hidden'); document.getElementById('login-container').classList.remove('hidden'); document.getElementById('admin-password').value = ''; }
         function togglePasswordField() { document.getElementById('password-field').style.display = (document.getElementById('role-select').value === 'admin') ? 'block' : 'none'; }
-        
-        // --- GESTIÓN (CRUD) ---
         async function addService() {
             const nameInput = document.getElementById('service-name');
             const priceInput = document.getElementById('service-price');
-            if (!nameInput.value.trim() || !priceInput.value) { alert('Por favor, ingresa un nombre y precio válidos.'); return; }
+            if (!nameInput.value.trim() || !priceInput.value) { alert('Ingresa nombre y precio válidos.'); return; }
             try {
                 await fetch('/api/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nameInput.value.trim(), price: parseFloat(priceInput.value) }) });
                 await loadInitialData(); renderAll(); nameInput.value = ''; priceInput.value = '';
@@ -175,7 +161,7 @@
         async function addBarber() {
             const nameInput = document.getElementById('barber-name');
             const commissionInput = document.getElementById('barber-commission');
-            if (!nameInput.value.trim() || !commissionInput.value) { alert('Ingresa un nombre y comisión válida (0-100).'); return; }
+            if (!nameInput.value.trim() || !commissionInput.value) { alert('Ingresa nombre y comisión válida.'); return; }
             try {
                 await fetch('/api/barbers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nameInput.value.trim(), commission: parseFloat(commissionInput.value) }) });
                 await loadInitialData(); renderAll(); nameInput.value = ''; commissionInput.value = '';
@@ -190,21 +176,19 @@
         async function addSale() {
             const barberId = Number(document.getElementById('sale-barber-select').value);
             const barber = barbers.find(b => b.id === barberId);
-            if (!barber) { alert('Por favor, selecciona un barbero.'); return; }
+            if (!barber) { alert('Selecciona un barbero.'); return; }
             const selectedServices = Array.from(document.querySelectorAll('#sale-services-list input:checked')).map(cb => services.find(s => s.id === Number(cb.value))).filter(Boolean);
-            if (selectedServices.length === 0) { alert('Debes seleccionar al menos un servicio.'); return; }
+            if (selectedServices.length === 0) { alert('Selecciona al menos un servicio.'); return; }
             const paymentMethod = document.getElementById('payment-method-select').value;
             const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
             const newSale = { barber, services: selectedServices, totalPrice, paymentMethod };
             try {
                 const response = await fetch('/api/sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSale) });
-                if (!response.ok) throw new Error('Error del servidor al guardar la venta.');
+                if (!response.ok) throw new Error('Error del servidor.');
                 await loadSalesForToday();
                 document.querySelectorAll('#sale-services-list input:checked').forEach(cb => cb.checked = false);
             } catch (error) { console.error(error); alert('Hubo un error al guardar la venta.'); }
         }
-
-        // --- CARGA Y RENDERIZADO DE DATOS ---
         async function loadSalesForToday() {
             const dateString = document.getElementById('filter-date').value;
             try {
@@ -226,7 +210,7 @@
             let dailyTotal = 0, commissionTotal = 0;
             tbody.innerHTML = '';
             if (!sales || sales.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay ventas para esta fecha.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay ventas para esta fecha.</td></tr>';
             } else {
                 sales.forEach(sale => {
                     const barberInfo = barbers.find(b => b.name === sale.barber_name);
@@ -236,7 +220,7 @@
                     const time = new Date(sale.sale_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const barberCommission = parseFloat(sale.total_price) * (commissionRate / 100);
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td>${sale.barber_name}</td><td>${servicesText}</td><td>${formatCOP(sale.total_price)}</td><td>${formatCOP(barberCommission)}</td><td>${sale.payment_method}</td><td>${time}</td><td class="actions-cell"></td>`;
+                    row.innerHTML = `<td>${sale.barber_name}</td><td>${servicesText}</td><td>${formatCOP(sale.total_price)}</td><td>${formatCOP(barberCommission)}</td><td>${sale.payment_method}</td><td>${time}</td>`;
                     tbody.appendChild(row);
                     dailyTotal += parseFloat(sale.total_price);
                     commissionTotal += barberCommission;
@@ -245,12 +229,10 @@
             document.getElementById('daily-total').textContent = `Total del Día: ${formatCOP(dailyTotal)}`;
             document.getElementById('commission-total').textContent = `Total Comisiones del Día: ${formatCOP(commissionTotal)}`;
         }
-        function renderServicesTable() { const tbody = document.querySelector('#services-table tbody'); tbody.innerHTML = ''; services.forEach(s => { const row = document.createElement('tr'); row.dataset.id = s.id; row.innerHTML = `<td>${s.name}</td><td>${formatCOP(s.price)}</td><td class="actions-cell"><button class="action-btn delete-btn" onclick="deleteService(${s.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
-        function renderBarbersTable() { const tbody = document.querySelector('#barbers-table tbody'); tbody.innerHTML = ''; barbers.forEach(b => { const row = document.createElement('tr'); row.dataset.id = b.id; row.innerHTML = `<td>${b.name}</td><td>${b.commission}%</td><td class="actions-cell"><button class="action-btn delete-btn" onclick="deleteBarber(${b.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
+        function renderServicesTable() { const tbody = document.querySelector('#services-table tbody'); tbody.innerHTML = ''; services.forEach(s => { const row = document.createElement('tr'); row.dataset.id = s.id; row.innerHTML = `<td>${s.name}</td><td>${formatCOP(s.price)}</td><td class="actions-cell"><button onclick="deleteService(${s.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
+        function renderBarbersTable() { const tbody = document.querySelector('#barbers-table tbody'); tbody.innerHTML = ''; barbers.forEach(b => { const row = document.createElement('tr'); row.dataset.id = b.id; row.innerHTML = `<td>${b.name}</td><td>${b.commission}%</td><td class="actions-cell"><button onclick="deleteBarber(${b.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
         function renderServiceSelection() { const list = document.getElementById('sale-services-list'); list.innerHTML = services.length === 0 ? 'Agrega servicios...' : ''; services.forEach(s => { list.innerHTML += `<label><input type="checkbox" value="${s.id}"> ${s.name} - <strong>${formatCOP(s.price)}</strong></label>`; }); }
         function renderBarberSelection() { const select = document.getElementById('sale-barber-select'); select.innerHTML = '<option value="">-- Selecciona Barbero --</option>'; barbers.forEach(b => { select.innerHTML += `<option value="${b.id}">${b.name}</option>`; }); }
-        
-        // --- EXPORTACIÓN A CSV ---
         function prepareDataForExport(salesData) { const dataToExport = []; salesData.forEach(sale => { const services = JSON.parse(sale.services_json); services.forEach(service => { dataToExport.push({ Fecha: new Date(sale.sale_date).toLocaleDateString('es-CO'), Hora: new Date(sale.sale_date).toLocaleTimeString('es-CO'), Barbero: sale.barber_name, Metodo_de_Pago: sale.payment_method, Servicio: service.name, Precio_Servicio: parseFloat(service.price).toFixed(0), Comision_Barbero_pct: barbers.find(b => b.name === sale.barber_name)?.commission || 0, Valor_Comision: (parseFloat(service.price) * ((barbers.find(b => b.name === sale.barber_name)?.commission || 0) / 100)).toFixed(0) }); }); }); return dataToExport; }
         async function handleExportDay() { const dateString = document.getElementById('filter-date').value; const response = await fetch(`/api/sales?date=${dateString}`); const salesData = await response.json(); if (salesData.length === 0) { alert('No hay ventas para exportar.'); return; } const dataToExport = prepareDataForExport(salesData); exportToCSV(dataToExport, `reporte-dia-${dateString}.csv`); }
         async function handleExportWeek() { /* Lógica de fetch para el rango de fechas */ }
