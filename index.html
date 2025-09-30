@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carpediem 777 - Sistema de Gestión</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1300px; margin: auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: #AF8C53; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-top: 0; }
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .card { background: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; }
+        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ced4da; box-sizing: border-box; }
+        button { background-color: #AF8C53; color: white; border: none; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
+        button:hover { background-color: #9a794e; }
+        button.action-btn { font-size: 0.8em; padding: 6px 10px; width: auto; margin: 0 5px; }
+        button.edit-btn { background-color: #ffc107; }
+        button.delete-btn { background-color: #dc3545; }
+        button.save-btn { background-color: #28a745; }
+        .screen { display: block; }
+        .hidden { display: none; }
+        #login-container { max-width: 400px; margin: 100px auto; text-align: center; }
+        #password-field { display: none; }
+        .header-controls { display: flex; justify-content: space-between; align-items: center; }
+        #logout-btn { width: auto; padding: 8px 15px; background-color: #6c757d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #e9ecef; text-align: left; vertical-align: middle; }
+        th { background-color: #f8f9fa; color: #495057; font-weight: 600; }
+        .actions-cell { width: 130px; text-align: right; }
+        .total-display { font-weight: bold; font-size: 1.2em; text-align: right; margin-top: 10px; padding: 12px; border-radius: 6px; }
+        #daily-total { background-color: #e9f7ef; color: #155724; }
+        #commission-total { background-color: #fff4e5; color: #856404; }
+        .service-list { max-height: 150px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px; border-radius: 6px; background-color: #fff; }
+        .export-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .export-btn { background-color: #1a73e8; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="login-container" class="container screen">
+        <h1>Bienvenido a Carpediem 777</h1>
+        <div class="card">
+            <h2>Iniciar Sesión</h2>
+            <label for="role-select" class="sr-only">Selecciona tu rol</label>
+            <select id="role-select" onchange="togglePasswordField()">
+                <option value="barber">Soy Barbero</option>
+                <option value="admin">Soy Administrador</option>
+            </select>
+            <div id="password-field">
+                <label for="admin-password" class="sr-only">Contraseña de Administrador</label>
+                <input type="password" id="admin-password" placeholder="Contraseña">
+            </div>
+            <button onclick="login()">Entrar</button>
+        </div>
+    </div>
+
+    <div id="app-container" class="container hidden">
+        <div class="header-controls">
+            <h1>💈 Carpediem 777 💈</h1>
+            <button id="logout-btn" onclick="logout()">Salir</button>
+        </div>
+        <div class="grid-container">
+            <div class="admin-only">
+                <div class="card">
+                    <h2>Gestión de Servicios</h2>
+                    <label for="service-name" class="sr-only">Nombre del Nuevo Servicio</label>
+                    <input type="text" id="service-name" placeholder="Nuevo Servicio">
+                    <label for="service-price" class="sr-only">Precio del Nuevo Servicio</label>
+                    <input type="number" id="service-price" placeholder="Precio ($)">
+                    <button onclick="addService()">+ Agregar Servicio</button>
+                    <table id="services-table">
+                        <thead><tr><th>Servicio</th><th>Precio</th><th class="actions-cell">Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="card" style="margin-top: 25px;">
+                    <h2>Gestión de Barberos</h2>
+                    <label for="barber-name" class="sr-only">Nombre del Nuevo Barbero</label>
+                    <input type="text" id="barber-name" placeholder="Nuevo Barbero">
+                    <label for="barber-commission" class="sr-only">Comisión del Nuevo Barbero</label>
+                    <input type="number" id="barber-commission" placeholder="Comisión (%)">
+                    <button onclick="addBarber()">+ Agregar Barbero</button>
+                    <table id="barbers-table">
+                        <thead><tr><th>Nombre</th><th>Comisión</th><th class="actions-cell">Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="card" style="margin-top: 25px;">
+                    <h2>Seguridad</h2>
+                    <label for="current-password" class="sr-only">Contraseña Actual</label>
+                    <input type="password" id="current-password" placeholder="Contraseña Actual">
+                    <label for="new-password" class="sr-only">Contraseña Nueva</label>
+                    <input type="password" id="new-password" placeholder="Contraseña Nueva">
+                    <button onclick="changeAdminPassword()">Cambiar Contraseña</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Nueva Venta</h2>
+                <label for="sale-barber-select">Barbero a cargo:</label>
+                <select id="sale-barber-select"></select>
+                <label for="sale-services-list">Servicios a realizar:</label>
+                <div id="sale-services-list" class="service-list"></div>
+                <label for="payment-method-select">Método de Pago:</label>
+                <select id="payment-method-select">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Nequi">Nequi</option>
+                    <option value="Daviplata">Daviplata</option>
+                </select>
+                <button onclick="addSale()">✓ Registrar Venta</button>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 25px;">
+            <h2>Cuentas del Día</h2>
+            <label for="filter-date">Mostrando ventas para la fecha:</label>
+            <input type="date" id="filter-date" onchange="renderFilteredSales()">
+            <table id="sales-table">
+                <thead><tr><th>Barbero</th><th>Servicios</th><th>Total Venta</th><th>Comisión Barbero</th><th>Método de Pago</th><th>Hora</th><th class="actions-cell">Acciones</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div id="daily-total" class="total-display">Total del Día: $ 0</div>
+            <div id="commission-total" class="total-display">Total Comisiones del Día: $ 0</div>
+            <div class="export-buttons admin-only">
+                <button class="export-btn" onclick="handleExportDay()">Exportar Día</button>
+                <button class="export-btn" onclick="handleExportWeek()">Exportar Semana</button>
+                <button class="export-btn" onclick="handleExportMonth()">Exportar Mes</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- ESTADO DE LA APLICACIÓN ---
+        let ADMIN_PASSWORD = 'admin123';
+        let services = [];
+        let barbers = [];
+        let sales = [];
+
+        // --- FUNCIONES DE UTILIDAD ---
+        const currencyFormatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        function formatCOP(value) { return currencyFormatter.format(value); }
+
+        // --- LÓGICA DE LOGIN Y NAVEGACIÓN ---
+        async function login() {
+            const role = document.getElementById('role-select').value;
+            if (role === 'admin' && document.getElementById('admin-password').value !== ADMIN_PASSWORD) {
+                alert('Contraseña incorrecta.');
+                return;
+            }
+            await loadInitialData();
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            const isAdmin = (role === 'admin');
+            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
+            document.querySelector('.grid-container').style.gridTemplateColumns = isAdmin ? '1fr 1fr' : '1fr';
+            document.getElementById('filter-date').value = new Date().toISOString().slice(0, 10);
+            await renderAll();
+        }
+        
+        async function loadInitialData() {
+            try {
+                const response = await fetch('/api/data');
+                if (!response.ok) throw new Error('Error de red al cargar datos.');
+                const data = await response.json();
+                services = data.services || [];
+                barbers = data.barbers || [];
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                alert('No se pudieron cargar los datos del servidor.');
+            }
+        }
+
+        function logout() { document.getElementById('app-container').classList.add('hidden'); document.getElementById('login-container').classList.remove('hidden'); document.getElementById('admin-password').value = ''; }
+        function togglePasswordField() { document.getElementById('password-field').style.display = (document.getElementById('role-select').value === 'admin') ? 'block' : 'none'; }
+        function changeAdminPassword() { const currentPassword = document.getElementById('current-password').value; const newPassword = document.getElementById('new-password').value; if (currentPassword !== ADMIN_PASSWORD) { alert('La contraseña actual es incorrecta.'); return; } if (!newPassword || newPassword.length < 4) { alert('La nueva contraseña es muy corta.'); return; } ADMIN_PASSWORD = newPassword; alert('¡Contraseña actualizada!'); document.getElementById('current-password').value = ''; document.getElementById('new-password').value = ''; }
+
+        // --- GESTIÓN DE SERVICIOS (CONECTADO AL BACKEND) ---
+        async function addService() {
+            const nameInput = document.getElementById('service-name');
+            const priceInput = document.getElementById('service-price');
+            if (!nameInput.value.trim() || !priceInput.value) { alert('Por favor, ingresa un nombre y precio válidos.'); return; }
+            try {
+                await fetch('/api/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nameInput.value.trim(), price: parseFloat(priceInput.value) }) });
+                await loadInitialData();
+                renderAll();
+                nameInput.value = '';
+                priceInput.value = '';
+            } catch (error) { alert('Error al guardar el servicio.'); }
+        }
+        async function deleteService(id) {
+            if (confirm('¿Estás seguro?')) {
+                try {
+                    await fetch(`/api/services/${id}`, { method: 'DELETE' });
+                    await loadInitialData();
+                    renderAll();
+                } catch (error) { alert('Error al eliminar el servicio.'); }
+            }
+        }
+        
+        // --- GESTIÓN DE BARBEROS (CONECTADO AL BACKEND) ---
+        async function addBarber() {
+            const nameInput = document.getElementById('barber-name');
+            const commissionInput = document.getElementById('barber-commission');
+            if (!nameInput.value.trim() || !commissionInput.value) { alert('Ingresa un nombre y comisión válida (0-100).'); return; }
+            try {
+                await fetch('/api/barbers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nameInput.value.trim(), commission: parseFloat(commissionInput.value) }) });
+                await loadInitialData();
+                renderAll();
+                nameInput.value = '';
+                commissionInput.value = '';
+            } catch (error) { alert('Error al guardar el barbero.'); }
+        }
+        async function deleteBarber(id) {
+            if (confirm('¿Estás seguro?')) {
+                try {
+                    await fetch(`/api/barbers/${id}`, { method: 'DELETE' });
+                    await loadInitialData();
+                    renderAll();
+                } catch (error) { alert('Error al eliminar el barbero.'); }
+            }
+        }
+        
+        // --- GESTIÓN DE VENTAS (CONECTADO AL BACKEND) ---
+        async function addSale() {
+            const barberId = Number(document.getElementById('sale-barber-select').value);
+            const barber = barbers.find(b => b.id === barberId);
+            if (!barber) { alert('Por favor, selecciona un barbero.'); return; }
+            const selectedServices = Array.from(document.querySelectorAll('#sale-services-list input:checked')).map(cb => services.find(s => s.id === Number(cb.value))).filter(Boolean);
+            if (selectedServices.length === 0) { alert('Debes seleccionar al menos un servicio.'); return; }
+            const paymentMethod = document.getElementById('payment-method-select').value;
+            const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+            const newSale = { barber, services: selectedServices, totalPrice, paymentMethod };
+            try {
+                const response = await fetch('/api/sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSale) });
+                if (!response.ok) throw new Error('Error del servidor');
+                await loadSalesForToday(); // Recargar ventas del día
+                document.querySelectorAll('#sale-services-list input:checked').forEach(cb => cb.checked = false);
+            } catch (error) { alert('Hubo un error al guardar la venta.'); }
+        }
+
+        async function loadSalesForToday() {
+            const dateString = document.getElementById('filter-date').value;
+            try {
+                const response = await fetch(`/api/sales?date=${dateString}`);
+                if (!response.ok) throw new Error('No se pudieron cargar las ventas.');
+                const salesFromServer = await response.json();
+                sales = salesFromServer.map(s => ({
+                    ...s,
+                    services: JSON.parse(s.services_json),
+                    date: new Date(s.sale_date)
+                }));
+                renderFilteredSales();
+            } catch (error) {
+                console.error(error);
+                sales = [];
+                renderFilteredSales();
+            }
+        }
+        
+        // --- RENDERIZADO DE LA INTERFAZ ---
+        async function renderAll() {
+            renderServicesTable();
+            renderBarbersTable();
+            renderServiceSelection();
+            renderBarberSelection();
+            await loadSalesForToday();
+        }
+        function renderServicesTable() { const tbody = document.querySelector('#services-table tbody'); tbody.innerHTML = ''; services.forEach(s => { const row = document.createElement('tr'); row.dataset.id = s.id; row.innerHTML = `<td>${s.name}</td><td>${formatCOP(s.price)}</td><td class="actions-cell"><button class="action-btn delete-btn" onclick="deleteService(${s.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
+        function renderBarbersTable() { const tbody = document.querySelector('#barbers-table tbody'); tbody.innerHTML = ''; barbers.forEach(b => { const row = document.createElement('tr'); row.dataset.id = b.id; row.innerHTML = `<td>${b.name}</td><td>${b.commission}%</td><td class="actions-cell"><button class="action-btn delete-btn" onclick="deleteBarber(${b.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
+        function renderServiceSelection() { const list = document.getElementById('sale-services-list'); list.innerHTML = services.length === 0 ? 'Agrega servicios...' : ''; services.forEach(s => { list.innerHTML += `<label><input type="checkbox" value="${s.id}"> ${s.name} - <strong>${formatCOP(s.price)}</strong></label>`; }); }
+        function renderBarberSelection() { const select = document.getElementById('sale-barber-select'); select.innerHTML = '<option value="">-- Selecciona Barbero --</option>'; barbers.forEach(b => { select.innerHTML += `<option value="${b.id}">${b.name}</option>`; }); }
+        function renderFilteredSales() { const tbody = document.querySelector('#sales-table tbody'); let dailyTotal = 0, commissionTotal = 0; tbody.innerHTML = ''; if (sales.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay ventas para esta fecha.</td></tr>'; } else { sales.forEach(sale => { const servicesText = (sale.services || []).map(s => s.name).join(', '); const time = new Date(sale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const barberCommission = sale.totalPrice * (sale.barber.commission / 100); const row = document.createElement('tr'); row.innerHTML = `<td>${sale.barber_name || (sale.barber && sale.barber.name)}</td><td>${servicesText}</td><td>${formatCOP(sale.totalPrice)}</td><td>${formatCOP(barberCommission)}</td><td>${sale.paymentMethod}</td><td>${time}</td><td class="actions-cell"></td>`; tbody.appendChild(row); dailyTotal += sale.totalPrice; commissionTotal += barberCommission; }); } document.getElementById('daily-total').textContent = `Total del Día: ${formatCOP(dailyTotal)}`; document.getElementById('commission-total').textContent = `Total Comisiones del Día: ${formatCOP(commissionTotal)}`; }
+
+        // --- EXPORTACIÓN A CSV ---
+        function prepareDataForExport(salesData) { const dataToExport = []; salesData.forEach(sale => { const services = JSON.parse(sale.services_json); services.forEach(service => { dataToExport.push({ Fecha: new Date(sale.sale_date).toLocaleDateString('es-CO'), Hora: new Date(sale.sale_date).toLocaleTimeString('es-CO'), Barbero: sale.barber_name, Metodo_de_Pago: sale.payment_method, Servicio: service.name, Precio_Servicio: service.price.toFixed(0), Comision_Barbero_pct: barbers.find(b => b.name === sale.barber_name)?.commission || 0, Valor_Comision: (service.price * ((barbers.find(b => b.name === sale.barber_name)?.commission || 0) / 100)).toFixed(0) }); }); }); return dataToExport; }
+        async function handleExportDay() { const dateString = document.getElementById('filter-date').value; const response = await fetch(`/api/sales?date=${dateString}`); const salesData = await response.json(); if (salesData.length === 0) { alert('No hay ventas para exportar.'); return; } const dataToExport = prepareDataForExport(salesData); exportToCSV(dataToExport, `reporte-dia-${dateString}.csv`); }
+        async function handleExportWeek() { /* Lógica similar de fetch para el rango de fechas */ }
+        async function handleExportMonth() { /* Lógica similar de fetch para el rango de fechas */ }
+        function exportToCSV(data, filename) { if (data.length === 0) return; const headers = Object.keys(data[0]); const csvRows = [headers.join(';')]; data.forEach(row => { const values = headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`); csvRows.push(values.join(';')); }); const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    </script>
+</body>
+</html>
