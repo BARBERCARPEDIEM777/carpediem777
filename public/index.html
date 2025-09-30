@@ -39,26 +39,67 @@
         }
     }
 
+    function logout() {
+        document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('login-container').classList.remove('hidden');
+        document.getElementById('admin-password').value = '';
+    }
+
+    function togglePasswordField() {
+        document.getElementById('password-field').style.display = (document.getElementById('role-select').value === 'admin') ? 'block' : 'none';
+    }
+
+    function changeAdminPassword() {
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        if (currentPassword !== ADMIN_PASSWORD) {
+            alert('La contraseña actual es incorrecta.');
+            return;
+        }
+        if (!newPassword || newPassword.length < 4) {
+            alert('La nueva contraseña es muy corta.');
+            return;
+        }
+        ADMIN_PASSWORD = newPassword;
+        alert('¡Contraseña actualizada!');
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+    }
+
     // --- GESTIÓN DE SERVICIOS (CONECTADO AL BACKEND) ---
     async function addService() {
         const nameInput = document.getElementById('service-name');
         const priceInput = document.getElementById('service-price');
-        if (!nameInput.value.trim() || !priceInput.value) { alert('Por favor, ingresa un nombre y precio válidos.'); return; }
+        if (!nameInput.value.trim() || !priceInput.value) {
+            alert('Por favor, ingresa un nombre y precio válidos.');
+            return;
+        }
         try {
-            await fetch('/api/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nameInput.value.trim(), price: parseFloat(priceInput.value) }) });
+            const response = await fetch('/api/services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: nameInput.value.trim(), price: parseFloat(priceInput.value) })
+            });
+            if (!response.ok) throw new Error('Error del servidor.');
             await loadInitialData();
             renderAll();
             nameInput.value = '';
             priceInput.value = '';
-        } catch (error) { alert('Error al guardar el servicio.'); }
+        } catch (error) {
+            alert('Error al guardar el servicio.');
+        }
     }
+
     async function deleteService(id) {
         if (confirm('¿Estás seguro?')) {
             try {
-                await fetch(`/api/services/${id}`, { method: 'DELETE' });
+                const response = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Error del servidor.');
                 await loadInitialData();
                 renderAll();
-            } catch (error) { alert('Error al eliminar el servicio.'); }
+            } catch (error) {
+                alert('Error al eliminar el servicio.');
+            }
         }
     }
 
@@ -66,22 +107,36 @@
     async function addBarber() {
         const nameInput = document.getElementById('barber-name');
         const commissionInput = document.getElementById('barber-commission');
-        if (!nameInput.value.trim() || !commissionInput.value) { alert('Ingresa un nombre y comisión válida (0-100).'); return; }
+        if (!nameInput.value.trim() || !commissionInput.value) {
+            alert('Ingresa un nombre y comisión válida (0-100).');
+            return;
+        }
         try {
-            await fetch('/api/barbers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: nameInput.value.trim(), commission: parseFloat(commissionInput.value) }) });
+            const response = await fetch('/api/barbers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: nameInput.value.trim(), commission: parseFloat(commissionInput.value) })
+            });
+            if (!response.ok) throw new Error('Error del servidor.');
             await loadInitialData();
             renderAll();
             nameInput.value = '';
             commissionInput.value = '';
-        } catch (error) { alert('Error al guardar el barbero.'); }
+        } catch (error) {
+            alert('Error al guardar el barbero.');
+        }
     }
+
     async function deleteBarber(id) {
         if (confirm('¿Estás seguro?')) {
             try {
-                await fetch(`/api/barbers/${id}`, { method: 'DELETE' });
+                const response = await fetch(`/api/barbers/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Error del servidor.');
                 await loadInitialData();
                 renderAll();
-            } catch (error) { alert('Error al eliminar el barbero.'); }
+            } catch (error) {
+                alert('Error al eliminar el barbero.');
+            }
         }
     }
 
@@ -125,18 +180,48 @@
         renderBarberSelection();
         await loadSalesForToday();
     }
-    
-    // =================================================================
-    // FUNCIÓN CORREGIDA
-    // =================================================================
+
     function renderFilteredSales() {
         const tbody = document.querySelector('#sales-table tbody');
         let dailyTotal = 0, commissionTotal = 0;
         tbody.innerHTML = '';
-        
         if (!sales || sales.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay ventas para esta fecha.</td></tr>';
         } else {
             sales.forEach(sale => {
-                // CORRECCIÓN: Buscar el objeto 'barber' completo en nuestra lista local de barberos.
                 const barberInfo = barbers.find(b => b.name === sale.barber_name);
+                const commissionRate = barberInfo ? barberInfo.commission : 0;
+                const servicesList = JSON.parse(sale.services_json || '[]');
+                const servicesText = servicesList.map(s => s.name).join(', ');
+                const time = new Date(sale.sale_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const barberCommission = parseFloat(sale.total_price) * (commissionRate / 100);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${sale.barber_name}</td>
+                    <td>${servicesText}</td>
+                    <td>${formatCOP(sale.total_price)}</td>
+                    <td>${formatCOP(barberCommission)}</td>
+                    <td>${sale.payment_method}</td>
+                    <td>${time}</td>
+                    <td class="actions-cell"></td>`;
+                tbody.appendChild(row);
+                dailyTotal += parseFloat(sale.total_price);
+                commissionTotal += barberCommission;
+            });
+        }
+        document.getElementById('daily-total').textContent = `Total del Día: ${formatCOP(dailyTotal)}`;
+        document.getElementById('commission-total').textContent = `Total Comisiones del Día: ${formatCOP(commissionTotal)}`;
+    }
+
+    function renderServicesTable() { const tbody = document.querySelector('#services-table tbody'); tbody.innerHTML = ''; services.forEach(s => { const row = document.createElement('tr'); row.dataset.id = s.id; row.innerHTML = `<td>${s.name}</td><td>${formatCOP(s.price)}</td><td class="actions-cell"><button class="action-btn delete-btn" onclick="deleteService(${s.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
+    function renderBarbersTable() { const tbody = document.querySelector('#barbers-table tbody'); tbody.innerHTML = ''; barbers.forEach(b => { const row = document.createElement('tr'); row.dataset.id = b.id; row.innerHTML = `<td>${b.name}</td><td>${b.commission}%</td><td class="actions-cell"><button class="action-btn delete-btn" onclick="deleteBarber(${b.id})">Eliminar</button></td>`; tbody.appendChild(row); }); }
+    function renderServiceSelection() { const list = document.getElementById('sale-services-list'); list.innerHTML = services.length === 0 ? 'Agrega servicios...' : ''; services.forEach(s => { list.innerHTML += `<label><input type="checkbox" value="${s.id}"> ${s.name} - <strong>${formatCOP(s.price)}</strong></label>`; }); }
+    function renderBarberSelection() { const select = document.getElementById('sale-barber-select'); select.innerHTML = '<option value="">-- Selecciona Barbero --</option>'; barbers.forEach(b => { select.innerHTML += `<option value="${b.id}">${b.name}</option>`; }); }
+        
+    // --- EXPORTACIÓN A CSV ---
+    function prepareDataForExport(salesData) { const dataToExport = []; salesData.forEach(sale => { const services = JSON.parse(sale.services_json); services.forEach(service => { dataToExport.push({ Fecha: new Date(sale.sale_date).toLocaleDateString('es-CO'), Hora: new Date(sale.sale_date).toLocaleTimeString('es-CO'), Barbero: sale.barber_name, Metodo_de_Pago: sale.payment_method, Servicio: service.name, Precio_Servicio: parseFloat(service.price).toFixed(0), Comision_Barbero_pct: barbers.find(b => b.name === sale.barber_name)?.commission || 0, Valor_Comision: (parseFloat(service.price) * ((barbers.find(b => b.name === sale.barber_name)?.commission || 0) / 100)).toFixed(0) }); }); }); return dataToExport; }
+    async function handleExportDay() { const dateString = document.getElementById('filter-date').value; const response = await fetch(`/api/sales?date=${dateString}`); const salesData = await response.json(); if (salesData.length === 0) { alert('No hay ventas para exportar.'); return; } const dataToExport = prepareDataForExport(salesData); exportToCSV(dataToExport, `reporte-dia-${dateString}.csv`); }
+    async function handleExportWeek() { /* Lógica de fetch para el rango de fechas */ }
+    async function handleExportMonth() { /* Lógica de fetch para el rango de fechas */ }
+    function exportToCSV(data, filename) { if (data.length === 0) return; const headers = Object.keys(data[0]); const csvRows = [headers.join(';')]; data.forEach(row => { const values = headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`); csvRows.push(values.join(';')); }); const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+</script>
